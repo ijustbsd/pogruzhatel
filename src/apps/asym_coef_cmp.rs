@@ -9,7 +9,7 @@ impl Default for AsymCoefCmp {
 }
 
 impl AsymCoefCmp {
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("Hello from AsymCoefCmp");
-    }
+    pub fn draw_app_panel(&mut self, _ui: &mut egui::Ui) {}
+
+    pub fn draw_settings_panel(&mut self, _ui: &mut egui::Ui) {}
 }

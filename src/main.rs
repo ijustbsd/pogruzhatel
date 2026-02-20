@@ -4,25 +4,41 @@ use egui::{Widget, util::History};
 mod apps;
 
 trait DemoApp {
-    fn demo_ui(&mut self, ui: &mut egui::Ui);
+    fn app_panel(&mut self, ui: &mut egui::Ui);
+    fn settings_panel(&mut self, ui: &mut egui::Ui);
 }
 
 impl DemoApp for apps::AsymCoefCmp {
-    fn demo_ui(&mut self, ui: &mut egui::Ui) {
-        self.ui(ui);
+    fn app_panel(&mut self, ui: &mut egui::Ui) {
+        self.draw_app_panel(ui);
+    }
+    fn settings_panel(&mut self, ui: &mut egui::Ui) {
+        self.draw_settings_panel(ui);
     }
 }
 
 impl DemoApp for apps::Impulse {
-    fn demo_ui(&mut self, ui: &mut egui::Ui) {
-        self.ui(ui);
+    fn app_panel(&mut self, ui: &mut egui::Ui) {
+        self.draw_app_panel(ui);
     }
+    fn settings_panel(&mut self, ui: &mut egui::Ui) {
+        self.draw_settings_panel(ui);
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum DemoAppEnum {
+    AsymCoefCmp,
+    Impulse,
 }
 
 struct State {
     is_settings_panel_open: bool,
     is_force_repaint: bool,
     zoom_factor: f32,
+    current_demo_app: DemoAppEnum,
+    impulse_app: apps::Impulse,
+    asym_coef_app: apps::AsymCoefCmp,
 }
 
 struct MainApp {
@@ -40,6 +56,13 @@ impl MainApp {
                 is_settings_panel_open: true,
                 is_force_repaint: false,
                 zoom_factor: 1.0,
+                current_demo_app: DemoAppEnum::Impulse,
+                impulse_app: apps::Impulse {
+                    ..Default::default()
+                },
+                asym_coef_app: apps::AsymCoefCmp {
+                    ..Default::default()
+                },
             },
             frame_history: History::new(0..frame_history_max_len, frame_history_max_age),
         }
@@ -49,6 +72,7 @@ impl MainApp {
         ctx.set_pixels_per_point(self.state.zoom_factor);
         self.top_panel(ui);
         self.settings_panel(ui);
+        self.demo_app_settings_panel(ui);
         self.app_panel(ui);
     }
 
@@ -58,6 +82,21 @@ impl MainApp {
                 egui::widgets::global_theme_preference_switch(ui);
                 ui.separator();
                 ui.toggle_value(&mut self.state.is_settings_panel_open, "Settings");
+                ui.separator();
+                egui::ComboBox::from_label("Select app...")
+                    .selected_text(format!("{:?}", self.state.current_demo_app))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.state.current_demo_app,
+                            DemoAppEnum::AsymCoefCmp,
+                            "AsymCoefCmp",
+                        );
+                        ui.selectable_value(
+                            &mut self.state.current_demo_app,
+                            DemoAppEnum::Impulse,
+                            "Impulse",
+                        );
+                    });
             });
         });
     }
@@ -101,6 +140,21 @@ impl MainApp {
             });
     }
 
+    fn demo_app_settings_panel(&mut self, ui: &mut egui::Ui) {
+        egui::SidePanel::right("demo_app_settings_panel")
+            .min_width(200.0)
+            .show_animated_inside(ui, self.state.is_settings_panel_open, |ui| {
+                match self.state.current_demo_app {
+                    DemoAppEnum::AsymCoefCmp => {
+                        self.state.asym_coef_app.settings_panel(ui);
+                    }
+                    DemoAppEnum::Impulse => {
+                        self.state.impulse_app.settings_panel(ui);
+                    }
+                };
+            });
+    }
+
     fn app_panel(&mut self, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             self.show_selected_app(ui);
@@ -108,8 +162,14 @@ impl MainApp {
     }
 
     fn show_selected_app(&mut self, ui: &mut egui::Ui) {
-        (&mut apps::Impulse {} as &mut dyn DemoApp).demo_ui(ui);
-        (&mut apps::AsymCoefCmp {} as &mut dyn DemoApp).demo_ui(ui);
+        match self.state.current_demo_app {
+            DemoAppEnum::AsymCoefCmp => {
+                self.state.asym_coef_app.app_panel(ui);
+            }
+            DemoAppEnum::Impulse => {
+                self.state.impulse_app.app_panel(ui);
+            }
+        };
     }
 
     fn add_frame_to_history(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
