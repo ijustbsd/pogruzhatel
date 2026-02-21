@@ -18,7 +18,7 @@ jobs:
           rustup set profile minimal
           rustup target add wasm32-unknown-unknown
       - name: Install Trunk
-        run: wget -qO- https://github.com/trunk-rs/trunk/releases/latest/download/trunk-aarch64-unknown-linux-gnu.tar.gz | tar -xzf-
+        run: wget -qO- https://github.com/trunk-rs/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
       - name: Build
         run: (./trunk build --release --minify --public-url $public_url)
         env:
