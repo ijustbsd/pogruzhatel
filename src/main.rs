@@ -1,6 +1,9 @@
 use eframe::egui;
 use egui::{Widget, util::History};
 
+#[cfg(target_arch = "wasm32")]
+use eframe::web_sys;
+
 mod apps;
 
 trait DemoApp {
@@ -194,6 +197,7 @@ impl eframe::App for MainApp {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 720.0]),
@@ -205,4 +209,32 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| Ok(Box::new(MainApp::new(cc)))),
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    use eframe::wasm_bindgen::JsCast as _;
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+        let canvas = document
+            .get_element_by_id("canvas")
+            .expect("Failed to find the_canvas_id")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("canvas was not a HtmlCanvasElement");
+
+        let _ = eframe::WebRunner::new()
+            .start(
+                canvas,
+                web_options,
+                Box::new(|cc| Ok(Box::new(MainApp::new(cc)))),
+            )
+            .await;
+    });
 }
