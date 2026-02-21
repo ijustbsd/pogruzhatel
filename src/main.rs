@@ -45,8 +45,8 @@ struct State {
 }
 
 struct MainApp {
-    frame_history: History<f32>,
     state: State,
+    frame_history: History<f32>,
 }
 
 impl MainApp {
@@ -93,7 +93,7 @@ impl MainApp {
         ctx.set_pixels_per_point(self.state.zoom_factor);
         self.top_panel(ui);
         self.settings_panel(ui);
-        self.demo_app_settings_panel(ui);
+        self.mini_app_settings_panel(ui);
         self.app_panel(ui);
     }
 
@@ -104,7 +104,7 @@ impl MainApp {
                 ui.separator();
                 ui.toggle_value(&mut self.state.is_settings_panel_open, "Настройки");
                 ui.separator();
-                egui::ComboBox::from_label("")
+                egui::ComboBox::from_label("Выберите модель...")
                     .selected_text({
                         let current_mini_app = self.state.current_mini_app;
                         let mut text = "";
@@ -139,11 +139,11 @@ impl MainApp {
             .show_animated_inside(ui, self.state.is_settings_panel_open, |ui| {
                 ui.add_space(8.0);
                 ui.vertical_centered(|ui| {
-                    ui.heading("Settings");
+                    ui.heading("Настройки");
                 });
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    ui.label("Zoom factor:");
+                    ui.label("Масштаб:");
                     egui::DragValue::new(&mut self.state.zoom_factor)
                         .range(0.5..=3.0)
                         .speed(0.01)
@@ -153,20 +153,17 @@ impl MainApp {
 
                 ui.add_space(24.0);
                 ui.vertical_centered(|ui| {
-                    ui.heading("Performance");
+                    ui.heading("Производительность");
                 });
                 ui.add_space(4.0);
-                ui.checkbox(
-                    &mut self.state.is_force_repaint,
-                    "Force repaint on each frame",
-                );
+                ui.checkbox(&mut self.state.is_force_repaint, "Рисовать каждый кадр");
                 ui.label(format!("FPS: {:.1}", fps));
-                ui.label(format!("Frame time: {:.1} ms", 1e3 * mean_frame_time));
+                ui.label(format!("Врямя кадра: {:.1} ms", 1e3 * mean_frame_time));
             });
     }
 
-    fn demo_app_settings_panel(&mut self, ui: &mut egui::Ui) {
-        egui::SidePanel::right("demo_app_settings_panel")
+    fn mini_app_settings_panel(&mut self, ui: &mut egui::Ui) {
+        egui::SidePanel::right("mini_app_settings_panel")
             .min_width(200.0)
             .show_animated_inside(ui, self.state.is_settings_panel_open, |ui| {
                 let current_mini_app = self.state.current_mini_app;
