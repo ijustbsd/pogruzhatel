@@ -6,12 +6,12 @@ use eframe::web_sys;
 
 mod apps;
 
-trait DemoApp {
+trait MiniApp {
     fn app_panel(&mut self, ui: &mut egui::Ui);
     fn settings_panel(&mut self, ui: &mut egui::Ui);
 }
 
-impl DemoApp for apps::AsymCoefCmp {
+impl MiniApp for apps::AsymCoefCmp {
     fn app_panel(&mut self, ui: &mut egui::Ui) {
         self.draw_app_panel(ui);
     }
@@ -20,7 +20,7 @@ impl DemoApp for apps::AsymCoefCmp {
     }
 }
 
-impl DemoApp for apps::Impulse {
+impl MiniApp for apps::ImpulseCmp {
     fn app_panel(&mut self, ui: &mut egui::Ui) {
         self.draw_app_panel(ui);
     }
@@ -29,24 +29,24 @@ impl DemoApp for apps::Impulse {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum DemoAppEnum {
+#[derive(Clone, Copy, PartialEq)]
+enum CurrentMiniApp {
     AsymCoefCmp,
-    Impulse,
+    ImpulseCmp,
 }
 
 struct State {
     is_settings_panel_open: bool,
     is_force_repaint: bool,
     zoom_factor: f32,
-    current_demo_app: DemoAppEnum,
-    impulse_app: apps::Impulse,
-    asym_coef_app: apps::AsymCoefCmp,
+    current_mini_app: CurrentMiniApp,
+    impulse_cmp: apps::ImpulseCmp,
+    asym_coef_cmp: apps::AsymCoefCmp,
 }
 
 struct MainApp {
-    state: State,
     frame_history: History<f32>,
+    state: State,
 }
 
 impl MainApp {
@@ -59,16 +59,34 @@ impl MainApp {
                 is_settings_panel_open: true,
                 is_force_repaint: false,
                 zoom_factor: 1.0,
-                current_demo_app: DemoAppEnum::Impulse,
-                impulse_app: apps::Impulse {
+                current_mini_app: CurrentMiniApp::ImpulseCmp,
+                impulse_cmp: apps::ImpulseCmp {
                     ..Default::default()
                 },
-                asym_coef_app: apps::AsymCoefCmp {
+                asym_coef_cmp: apps::AsymCoefCmp {
                     ..Default::default()
                 },
             },
             frame_history: History::new(0..frame_history_max_len, frame_history_max_age),
         }
+    }
+
+    pub fn mini_apps(
+        &mut self,
+    ) -> impl Iterator<Item = (&'static str, CurrentMiniApp, &mut dyn MiniApp)> {
+        let vec = vec![
+            (
+                "Импульс",
+                CurrentMiniApp::ImpulseCmp,
+                &mut self.state.impulse_cmp as &mut dyn MiniApp,
+            ),
+            (
+                "Коэффициент асимметрии",
+                CurrentMiniApp::AsymCoefCmp,
+                &mut self.state.asym_coef_cmp as &mut dyn MiniApp,
+            ),
+        ];
+        vec.into_iter()
     }
 
     fn ui(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
@@ -84,21 +102,25 @@ impl MainApp {
             ui.horizontal_wrapped(|ui| {
                 egui::widgets::global_theme_preference_switch(ui);
                 ui.separator();
-                ui.toggle_value(&mut self.state.is_settings_panel_open, "Settings");
+                ui.toggle_value(&mut self.state.is_settings_panel_open, "Настройки");
                 ui.separator();
-                egui::ComboBox::from_label("Select app...")
-                    .selected_text(format!("{:?}", self.state.current_demo_app))
+                egui::ComboBox::from_label("")
+                    .selected_text({
+                        let current_mini_app = self.state.current_mini_app;
+                        let mut text = "";
+                        for (name, mini_app_enum, _mini_app_instance) in self.mini_apps() {
+                            if current_mini_app == mini_app_enum {
+                                text = name;
+                            }
+                        }
+                        text
+                    })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.state.current_demo_app,
-                            DemoAppEnum::AsymCoefCmp,
-                            "AsymCoefCmp",
-                        );
-                        ui.selectable_value(
-                            &mut self.state.current_demo_app,
-                            DemoAppEnum::Impulse,
-                            "Impulse",
-                        );
+                        let mut current_mini_app = self.state.current_mini_app;
+                        for (name, mini_app_enum, _mini_app_instance) in self.mini_apps() {
+                            ui.selectable_value(&mut current_mini_app, mini_app_enum, name);
+                        }
+                        self.state.current_mini_app = current_mini_app;
                     });
             });
         });
@@ -147,14 +169,12 @@ impl MainApp {
         egui::SidePanel::right("demo_app_settings_panel")
             .min_width(200.0)
             .show_animated_inside(ui, self.state.is_settings_panel_open, |ui| {
-                match self.state.current_demo_app {
-                    DemoAppEnum::AsymCoefCmp => {
-                        self.state.asym_coef_app.settings_panel(ui);
+                let current_mini_app = self.state.current_mini_app;
+                for (_name, app, mini_app) in self.mini_apps() {
+                    if app == current_mini_app {
+                        mini_app.settings_panel(ui);
                     }
-                    DemoAppEnum::Impulse => {
-                        self.state.impulse_app.settings_panel(ui);
-                    }
-                };
+                }
             });
     }
 
@@ -165,14 +185,12 @@ impl MainApp {
     }
 
     fn show_selected_app(&mut self, ui: &mut egui::Ui) {
-        match self.state.current_demo_app {
-            DemoAppEnum::AsymCoefCmp => {
-                self.state.asym_coef_app.app_panel(ui);
+        let current_mini_app = self.state.current_mini_app;
+        for (_name, app, mini_app) in self.mini_apps() {
+            if app == current_mini_app {
+                mini_app.app_panel(ui);
             }
-            DemoAppEnum::Impulse => {
-                self.state.impulse_app.app_panel(ui);
-            }
-        };
+        }
     }
 
     fn add_frame_to_history(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {

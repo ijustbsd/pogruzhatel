@@ -8,12 +8,12 @@ use egui_plot::PlotPoint;
 use egui_plot::PlotPoints;
 use std::f64::consts::PI;
 
-pub struct Impulse {
+pub struct ImpulseCmp {
     pub vibration_points: Vec<PlotPoint>,
     pub impulse_points: Vec<PlotPoint>,
 }
 
-impl Default for Impulse {
+impl Default for ImpulseCmp {
     fn default() -> Self {
         Self {
             vibration_points: vec![],
@@ -22,7 +22,7 @@ impl Default for Impulse {
     }
 }
 
-impl Impulse {
+impl ImpulseCmp {
     fn vibration_function(&self, t: Vec<f64>, n: i64, m: f64, r: f64, omega: f64) -> Vec<f64> {
         let mut result = vec![0.0; t.len()];
         for i in 0..t.len() {
