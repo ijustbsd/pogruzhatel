@@ -1,0 +1,29 @@
+name: Github Pages
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup rustup
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup set profile minimal
+          rustup target add wasm32-unknown-unknown
+      - name: Install Trunk
+        run: wget -qO- https://github.com/trunk-rs/trunk/releases/latest/download/trunk-aarch64-unknown-linux-gnu.tar.gz | tar -xzf-
+      - name: Build
+        run: (./trunk build --release --minify --public-url $public_url)
+        env:
+          public_url: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+      - name: Deploy
+        uses: actions/deploy-pages@v4
+        with:
+          path: ./dist/
